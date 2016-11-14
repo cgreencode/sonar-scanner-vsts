@@ -1,5 +1,17 @@
 $testsRoot = "$PSScriptRoot\Tests\L0"
 
+$tasksRoot = "$PSScriptRoot\build\Temp\Extensions\SonarQube\Tasks"
+$beginTaskFolder = "$tasksRoot\ScannerMsBuildBegin"
+$endTaskFolder = "$tasksRoot\ScannerMsBuildEnd"
+
+$ErrorActionPreference = "Stop"
+
+if (-Not (Test-Path $beginTaskFolder) -Or 
+    -Not (Test-Path $endTaskFolder))
+{
+    throw "Before running the tests, please, run "".\pack.ps1 [environment] [version]"""
+}
+
 # SonarQubeHelper tests
 Write-Output "Testing SonarQubeHelper"
 & $testsRoot\Common-SonarQubeHelpers\InvokeRestApi.ps1
