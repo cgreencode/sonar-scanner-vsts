@@ -54,9 +54,9 @@ exports.npmInstallTask = function(packagePath) {
 exports.tfxCommand = function(extensionPath, packageJSON, params = '') {
   const vssExtension = fs.readJsonSync(path.join(extensionPath, 'vss-extension.json'));
   run(
-    `"${resolveApp(
+    `${resolveApp(
       path.join('node_modules', '.bin', 'tfx')
-    )}" extension create --output-path "../../${packageJSON.name}-${fullVersion(
+    )} extension create --output-path "../../${packageJSON.name}-${fullVersion(
       packageJSON.version
     )}-${vssExtension.id}.vsix" ${params}`,
     {
@@ -145,7 +145,6 @@ exports.runSonnarQubeScanner = function(callback, options = {}) {
     'sonar.analysis.buildNumber': process.env.TRAVIS_BUILD_NUMBER,
     'sonar.analysis.pipeline': process.env.TRAVIS_BUILD_NUMBER,
     'sonar.analysis.repository': process.env.TRAVIS_REPO_SLUG,
-    'sonar.eslint.reportPaths': 'eslint-report.json',
     'sonar.typescript.lcov.reportPaths': 'coverage/lcov.info'
   };
   sonarqubeScanner(

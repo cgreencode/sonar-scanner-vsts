@@ -1,4 +1,4 @@
-@Library('SonarSource@2.1.2') _
+@Library('SonarSource@1.3') _
 
 pipeline {
     agent { 
