@@ -1,4 +1,4 @@
-import * as tl from 'vsts-task-lib/task';
+import * as tl from 'azure-pipelines-task-lib/task';
 import Endpoint from './Endpoint';
 import { getJSON } from '../helpers/request';
 
@@ -7,6 +7,7 @@ interface ITask {
   componentKey: string;
   organization?: string;
   status: string;
+  errorMessage?: string;
   type: string;
   componentName: string;
 }
@@ -35,10 +36,11 @@ export default class Task {
         if (tries <= 0) {
           throw new TimeOutReachedError();
         }
+        const errorInfo = task.errorMessage ? `, Error message: ${task.errorMessage}` : '';
         switch (task.status.toUpperCase()) {
           case 'CANCEL':
           case 'FAILED':
-            throw new Error(`[SQ] Task failed with status ${task.status}`);
+            throw new Error(`[SQ] Task failed with status ${task.status}${errorInfo}`);
           case 'SUCCESS':
             tl.debug(`[SQ] Task complete: ${JSON.stringify(task)}`);
             return new Task(task);

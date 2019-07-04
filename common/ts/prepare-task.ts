@@ -1,6 +1,6 @@
 import * as semver from 'semver';
-import * as tl from 'vsts-task-lib/task';
-import * as vm from 'vso-node-api';
+import * as tl from 'azure-pipelines-task-lib/task';
+import * as vm from 'azure-devops-node-api';
 import Endpoint, { EndpointType } from './sonarqube/Endpoint';
 import Scanner, { ScannerMode } from './sonarqube/Scanner';
 import { toCleanJSON } from './helpers/utils';
@@ -72,7 +72,7 @@ async function populateBranchAndPrProps(props: { [key: string]: string }) {
       props['sonar.pullrequest.vsts.instanceUrl'] = collectionUrl;
       props['sonar.pullrequest.vsts.project'] = tl.getVariable('System.TeamProject');
       props['sonar.pullrequest.vsts.repository'] = tl.getVariable(REPO_NAME_VAR);
-    } else if (provider === 'GitHub') {
+    } else if (provider === 'GitHub' || provider === 'GitHubEnterprise') {
       props['sonar.pullrequest.key'] = tl.getVariable('System.PullRequest.PullRequestNumber');
       props['sonar.pullrequest.provider'] = 'github';
       props['sonar.pullrequest.github.repository'] = tl.getVariable(REPO_NAME_VAR);
