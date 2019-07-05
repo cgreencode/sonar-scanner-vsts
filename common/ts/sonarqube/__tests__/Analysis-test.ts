@@ -22,7 +22,7 @@ jest.mock('../../helpers/request', () => ({
   )
 }));
 
-jest.mock('azure-pipelines-task-lib/task', () => ({
+jest.mock('vsts-task-lib/task', () => ({
   debug: jest.fn(),
   error: jest.fn()
 }));
