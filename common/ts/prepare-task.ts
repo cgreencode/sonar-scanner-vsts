@@ -4,10 +4,30 @@ import * as vm from 'azure-devops-node-api';
 import Endpoint, { EndpointType } from './sonarqube/Endpoint';
 import Scanner, { ScannerMode } from './sonarqube/Scanner';
 import { toCleanJSON } from './helpers/utils';
-import { getServerVersion } from './helpers/request';
-import { REPORT_TASK_NAME } from './sonarqube/TaskReport';
+import { getJSON, getServerVersion } from './helpers/request';
+import { getAuthToken } from './helpers/azdo-server-utils';
+import * as azdoApiUtils from './helpers/azdo-api-utils';
 
 const REPO_NAME_VAR = 'Build.Repository.Name';
+
+interface Component {
+  organization: string;
+  id: string;
+  key: string;
+  name: string;
+  qualifier: string;
+  analysisDate: Date;
+  tags: any[];
+  visibility: string;
+  leakPeriodDate: Date;
+  version: string;
+}
+
+interface SonarCloudComponentDetail {
+  component: Component;
+  ancestors: any[];
+}
+
 
 export default async function prepareTask(endpoint: Endpoint, rootPath: string) {
   if (
@@ -25,6 +45,8 @@ export default async function prepareTask(endpoint: Endpoint, rootPath: string) 
 
   const props: { [key: string]: string } = {};
 
+  checkProjectMatrix(endpoint);
+
   if (await branchFeatureSupported(endpoint)) {
     await populateBranchAndPrProps(props);
     tl.debug(`[SQ] Branch and PR parameters: ${JSON.stringify(props)}`);
@@ -35,8 +57,6 @@ export default async function prepareTask(endpoint: Endpoint, rootPath: string) 
     .filter(keyValue => !keyValue.startsWith('#'))
     .map(keyValue => keyValue.split(/=(.+)/))
     .forEach(([k, v]) => (props[k] = v));
-
-  props['sonar.scanner.metadataFilePath'] = reportPath();
 
   tl.setVariable('SONARQUBE_SCANNER_MODE', scannerMode);
   tl.setVariable('SONARQUBE_ENDPOINT', endpoint.toJson(), true);
@@ -50,6 +70,41 @@ export default async function prepareTask(endpoint: Endpoint, rootPath: string) 
   );
 
   await scanner.runPrepare();
+}
+
+export function checkProjectMatrix(endpoint: Endpoint) {
+  if (endpoint.type === EndpointType.SonarCloud) {
+    azdoApiUtils.getProjectDetails().then((projectDetails: azdoApiUtils.ProjectDetail) => {
+      tl.debug('Returned : ' + JSON.stringify(projectDetails));
+      let component = tl.getInput('projectKey', true);
+      getJSON(endpoint, '/api/components/show', { component }).then(
+        ( componentDetail: SonarCloudComponentDetail ) => {
+          tl.debug("SC project visibility : " + componentDetail.component.visibility);
+          if (componentDetail.component.visibility === 'public') {
+            tl.debug("Entered public SC Project");
+            tl.debug("AzDO project visibility : " + projectDetails.visibility);
+            if (projectDetails.visibility === 'private') {
+              tl.debug("Entered private AzDO Project");
+              tl.setResult(
+                tl.TaskResult.Failed,
+                "ERROR : You can't analyze a private repository towards a public SonarCloud organization. Either switch to a public repository, or a private organization."
+              );
+            }
+          }
+        },
+        err => {
+          if (err && err.message) {
+            tl.error(`[SQ] Error retrieving project information: ${err.message}`);
+          } else if (err) {
+            tl.error(`[SQ] Error retrieving project information: ${JSON.stringify(err)}`);
+          }
+          throw new Error(
+            `[SQ] Error retrieving project information for project key '${component}'`
+          );
+        }
+      );
+    });
+  }
 }
 
 async function branchFeatureSupported(endpoint) {
@@ -117,12 +172,6 @@ function branchName(fullName: string) {
   return fullName;
 }
 
-export function reportPath(): string {
-  return `${tl.getVariable('Agent.TempDirectory')}\\${tl.getVariable(
-    'Build.BuildNumber'
-  )}\\${REPORT_TASK_NAME}`;
-}
-
 /**
  * Waiting for https://github.com/Microsoft/vsts-tasks/issues/7592
  * query the repo to get the full name of the default branch.
@@ -149,13 +198,4 @@ function getWebApi(collectionUrl: string): vm.WebApi {
   const accessToken = getAuthToken();
   const credentialHandler = vm.getBearerHandler(accessToken);
   return new vm.WebApi(collectionUrl, credentialHandler);
-}
-
-function getAuthToken() {
-  const auth = tl.getEndpointAuthorization('SYSTEMVSSCONNECTION', false);
-  if (auth.scheme.toLowerCase() === 'oauth') {
-    return auth.parameters['AccessToken'];
-  } else {
-    throw new Error('Unable to get credential to perform rest API calls');
-  }
 }
