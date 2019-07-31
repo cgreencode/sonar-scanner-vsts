@@ -136,8 +136,6 @@ it('task should not fail the task even if all ceTasks timeout', async () => {
     .spyOn(serverUtils, 'publishBuildSummary')
     .mockImplementation(() => null);
 
-  jest.spyOn(Metrics, 'getAllMetrics').mockImplementation(() => METRICS);
-
   await publishTask.default(EndpointType.SonarCloud);
 
   expect(serverUtils.publishBuildSummary).toHaveBeenCalledTimes(1);
