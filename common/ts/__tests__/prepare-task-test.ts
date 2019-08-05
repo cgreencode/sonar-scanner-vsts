@@ -2,7 +2,7 @@ import * as tl from 'azure-pipelines-task-lib/task';
 import Endpoint, { EndpointType } from '../sonarqube/Endpoint';
 import * as prept from '../prepare-task';
 import * as request from '../helpers/request';
-import Scanner, { ScannerMSBuild, ScannerCLI } from '../sonarqube/Scanner';
+import Scanner, { ScannerMSBuild } from '../sonarqube/Scanner';
 
 beforeEach(() => {
   jest.restoreAllMocks();
@@ -31,21 +31,16 @@ it('should display warning for dedicated extension for Sonarcloud', async () => 
   );
 });
 
-it('should fill SONAR_SCANNER_OPTS environment variable', async () => {
-  const scannerObject = new ScannerCLI(
-    __dirname,
-    {
-      projectSettings: 'dummyProjectKey.properties'
-    },
-    'file'
-  );
+it('should build report task path from variables', () => {
+  const reportDirectory = 'C:\\temp\\dir';
+  const buildNumber = '20250909.1';
 
-  jest.spyOn(tl, 'getInput').mockImplementation(() => 'CLI');
-  jest.spyOn(Scanner, 'getPrepareScanner').mockImplementation(() => scannerObject);
-  jest.spyOn(scannerObject, 'runPrepare').mockImplementation(() => null);
-  jest.spyOn(request, 'getServerVersion').mockImplementation(() => '7.2.0');
+  const reportFullPath = `${reportDirectory}\\${buildNumber}\\report-task.txt`;
 
-  await prept.default(SQ_ENDPOINT, __dirname);
+  jest.spyOn(tl, 'getVariable').mockImplementationOnce(() => reportDirectory);
+  jest.spyOn(tl, 'getVariable').mockImplementationOnce(() => buildNumber);
 
-  expect(process.env.SONAR_SCANNER_OPTS).toBe('-Dproject.settings=dummyProjectKey.properties');
+  const actual = prept.reportPath();
+
+  expect(actual).toBe(reportFullPath);
 });
