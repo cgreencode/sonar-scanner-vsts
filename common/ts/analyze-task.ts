@@ -8,7 +8,6 @@ export default async function analyzeTask(rootPath: string) {
       "[SQ] The 'Prepare Analysis Configuration' task was not executed prior to this task"
     );
   }
-
   const scanner = Scanner.getAnalyzeScanner(rootPath, scannerMode);
   await scanner.runAnalysis();
 }
