@@ -4,9 +4,7 @@ import Endpoint, { EndpointType, EndpointData } from './sonarqube/Endpoint';
 import Metrics from './sonarqube/Metrics';
 import Task, { TimeOutReachedError } from './sonarqube/Task';
 import TaskReport from './sonarqube/TaskReport';
-import { publishBuildSummary, fillBuildProperty } from './helpers/azdo-server-utils';
-
-let globalQualityGateStatus = '';
+import { publishBuildSummary } from './helpers/vsts-server-utils';
 
 export default async function publishTask(endpointType: EndpointType) {
   const params = tl.getVariable('SONARQUBE_SCANNER_PARAMS');
@@ -26,22 +24,9 @@ export default async function publishTask(endpointType: EndpointType) {
 
   const timeoutSec = timeoutInSeconds();
   const taskReports = await TaskReport.createTaskReportsFromFiles();
-
   const analyses = await Promise.all(
     taskReports.map(taskReport => getReportForTask(taskReport, metrics, endpoint, timeoutSec))
   );
-
-  if (globalQualityGateStatus === '') {
-    globalQualityGateStatus = 'ok';
-  }
-
-  tl.debug(
-    `Following QualityGate status : '${globalQualityGateStatus}' has been deducted from ${
-      taskReports.length
-    } analysis(es) of this build.`
-  );
-
-  fillBuildProperty(globalQualityGateStatus);
 
   publishBuildSummary(analyses.join('\r\n'), endpoint.type);
 }
@@ -65,11 +50,6 @@ export async function getReportForTask(
       metrics,
       projectName: task.componentName
     });
-
-    if (analysis.status === 'ERROR' || analysis.status === 'WARN' || analysis.status === 'NONE') {
-      globalQualityGateStatus = 'failed';
-    }
-
     return analysis.getHtmlAnalysisReport();
   } catch (e) {
     if (e instanceof TimeOutReachedError) {

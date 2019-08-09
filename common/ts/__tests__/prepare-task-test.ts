@@ -23,11 +23,27 @@ it('should display warning for dedicated extension for Sonarcloud', async () => 
   jest.spyOn(Scanner, 'getPrepareScanner').mockImplementation(() => scannerObject);
   jest.spyOn(scannerObject, 'runPrepare').mockImplementation(() => null);
   jest.spyOn(request, 'getServerVersion').mockImplementation(() => '7.0.0');
-  jest.spyOn(prept, 'getDefaultBranch').mockImplementation(() => 'refs/heads/master');
 
   await prept.default(SQ_ENDPOINT, __dirname);
 
   expect(tl.warning).toHaveBeenCalledWith(
     'There is a dedicated extension for SonarCloud: https://marketplace.visualstudio.com/items?itemName=SonarSource.sonarcloud'
   );
+});
+
+it('should build report task path from variables', () => {
+  const reportDirectory = 'C:\\\\temp\\\\dir';
+  const reportDirectoryFunction = 'C:\\temp\\dir';
+  const buildNumber = '20250909.1';
+
+  const reportFullPath = `${reportDirectory}\\\\${buildNumber}\\\\([0-9A-Fa-f]{8}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{4}[-][0-9A-Fa-f]{12})\\\\report-task\.txt`;
+
+  const regex = new RegExp(reportFullPath);
+
+  jest.spyOn(tl, 'getVariable').mockImplementationOnce(() => reportDirectoryFunction);
+  jest.spyOn(tl, 'getVariable').mockImplementationOnce(() => buildNumber);
+
+  const actual = prept.reportPath();
+
+  expect(actual).toMatch(regex);
 });
